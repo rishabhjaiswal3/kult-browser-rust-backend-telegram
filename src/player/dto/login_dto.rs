@@ -29,6 +29,30 @@ pub struct LoginRequest {
     pub referral_code: Option<String>,
 }
 
+/// Payload for logging in with a Privy identity token and linked TON wallet.
+#[derive(Debug, Deserialize, ToSchema)]
+pub struct PrivyLoginRequest {
+    /// Privy identity token. Must include linked_accounts and be signed by Privy.
+    #[serde(rename = "identityToken")]
+    pub identity_token: String,
+
+    /// TON wallet address that must be present in the verified Privy linked_accounts.
+    #[serde(rename = "walletAddress")]
+    pub wallet_address: String,
+
+    /// Optional initial display name
+    pub name: Option<String>,
+
+    /// Optional arbitrary metadata (e.g. avatar)
+    #[schema(value_type = Option<Object>)]
+    pub metadata: Option<serde_json::Value>,
+
+    /// Optional referral code provided by the frontend if they clicked an invite link
+    #[serde(default)]
+    #[serde(rename = "referralCode")]
+    pub referral_code: Option<String>,
+}
+
 /// GET /api/player/nonce - Response body
 #[derive(Debug, Serialize, ToSchema)]
 pub struct NonceResponse {

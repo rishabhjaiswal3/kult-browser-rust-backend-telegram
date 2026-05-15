@@ -1,6 +1,6 @@
 use crate::handler::{ApiResponse, AppError};
 use crate::middleware::AuthPlayer;
-use crate::player::dto::{LoginRequest, UpdateNameRequest};
+use crate::player::dto::{LoginRequest, PrivyLoginRequest, UpdateNameRequest};
 use crate::player::PlayerService;
 use axum::extract::{Query, State};
 use axum::response::{IntoResponse, Response};
@@ -75,6 +75,40 @@ pub async fn login(
         .unwrap_or("0.0.0.0");
 
     match state.player_service.login(request, ip_address).await {
+        Ok(data) => ApiResponse::success(data).into_response(),
+        Err(e) => e.into_response(),
+    }
+}
+
+/// POST /api/player/privy-login
+#[utoipa::path(
+    post,
+    path = "/api/player/privy-login",
+    request_body = PrivyLoginRequest,
+    responses(
+        (status = 200, description = "Login or create a player from verified Privy TON identity", body = crate::openapi::LoginApiResponse),
+        (status = 400, description = "Invalid login payload", body = crate::openapi::ErrorResponse),
+        (status = 401, description = "Invalid Privy identity token", body = crate::openapi::ErrorResponse),
+        (status = 500, description = "Internal server error", body = crate::openapi::ErrorResponse)
+    ),
+    tag = "Player"
+)]
+pub async fn privy_login(
+    State(state): State<PlayerState>,
+    headers: axum::http::header::HeaderMap,
+    payload: Result<Json<PrivyLoginRequest>, axum::extract::rejection::JsonRejection>,
+) -> Response {
+    let Json(request) = match payload {
+        Ok(p) => p,
+        Err(rejection) => return AppError::BadRequest(rejection.body_text()).into_response(),
+    };
+
+    let ip_address = headers
+        .get("x-forwarded-for")
+        .and_then(|h| h.to_str().ok())
+        .unwrap_or("0.0.0.0");
+
+    match state.player_service.privy_login(request, ip_address).await {
         Ok(data) => ApiResponse::success(data).into_response(),
         Err(e) => e.into_response(),
     }

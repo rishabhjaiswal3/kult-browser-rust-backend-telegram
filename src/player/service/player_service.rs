@@ -4,8 +4,9 @@ use crate::leaderboard::service::GameLeaderboardService;
 use crate::middleware::AuthService;
 use crate::player::dto::{
     GameScoreEntry, LoginRequest, LoginResponse, NonceResponse, PlayerInfo, PlayerProfile,
-    PlayerProfileResponse, UpdateNameRequest, UpdateNameResponse,
+    PlayerProfileResponse, PrivyLoginRequest, UpdateNameRequest, UpdateNameResponse,
 };
+use crate::player::privy::verify_privy_ton_wallet;
 use crate::player::repository::PlayerRepository;
 use crate::player::siwe::{extract_nonce, verify_wallet_signature, NonceRepository};
 use mongodb::bson::Document;
@@ -68,7 +69,9 @@ impl PlayerService {
         tracing::info!(wallet = %wallet, "Player login attempt");
 
         if wallet.is_empty() {
-            return Err(AppError::BadRequest("walletAddress is required".to_string()));
+            return Err(AppError::BadRequest(
+                "walletAddress is required".to_string(),
+            ));
         }
 
         // --- SIWE verification ---
@@ -165,6 +168,89 @@ impl PlayerService {
             }
         } else {
             tracing::debug!(wallet = %wallet, "Existing player logged in");
+        }
+
+        let token = AuthService::sign_token(&player).map_err(|e| {
+            tracing::error!(error = %e, "Failed to sign JWT token");
+            AppError::Internal(e)
+        })?;
+
+        Ok(LoginResponse {
+            token,
+            player: PlayerInfo {
+                id: player.id.map(|oid| oid.to_hex()).unwrap_or_default(),
+                wallet_address: player.wallet_address,
+                name: player.name,
+            },
+        })
+    }
+
+    /// Handle player login via Privy identity token with a linked TON wallet.
+    pub async fn privy_login(
+        &self,
+        request: PrivyLoginRequest,
+        ip_address: &str,
+    ) -> Result<LoginResponse, AppError> {
+        let wallet = request.wallet_address.trim().to_string();
+        tracing::info!(wallet = %wallet, "Privy TON login attempt");
+
+        if wallet.is_empty() {
+            return Err(AppError::BadRequest(
+                "walletAddress is required".to_string(),
+            ));
+        }
+
+        verify_privy_ton_wallet(&request.identity_token, &wallet).map_err(|reason| {
+            tracing::warn!(wallet = %wallet, reason = %reason, "Privy TON verification failed");
+            AppError::Unauthorized(reason)
+        })?;
+
+        tracing::info!(wallet = %wallet, "Privy TON verification passed");
+
+        let name = request.name.unwrap_or_else(|| {
+            let suffix = format!("{:x}", chrono::Utc::now().timestamp_millis())
+                .chars()
+                .rev()
+                .take(8)
+                .collect::<String>();
+            format!("kult-player_{}", suffix)
+        });
+
+        let metadata: Option<Document> = request
+            .metadata
+            .and_then(|v| mongodb::bson::to_document(&v).ok());
+
+        let (player, is_new) = self
+            .player_repo
+            .find_or_create(&wallet, &name, metadata)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, wallet = %wallet, "DB error during Privy TON login");
+                AppError::Internal(e)
+            })?;
+
+        if is_new {
+            tracing::info!(wallet = %wallet, name = %name, "New TON player registered");
+
+            if let Some(ref_code) = request.referral_code {
+                if let Some(fraud_service) = &self.anti_fraud_service {
+                    let player_id_str = player
+                        .id
+                        .map(|oid| oid.to_hex())
+                        .unwrap_or_else(|| wallet.clone());
+
+                    if let Err(e) = fraud_service
+                        .process_referral_signup(&player_id_str, &ref_code, ip_address)
+                        .await
+                    {
+                        tracing::error!(
+                            error = %e,
+                            wallet = %wallet,
+                            "Failed to process referral signup"
+                        );
+                    }
+                }
+            }
         }
 
         let token = AuthService::sign_token(&player).map_err(|e| {

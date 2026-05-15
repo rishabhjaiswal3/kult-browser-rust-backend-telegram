@@ -22,6 +22,7 @@ use crate::moments::social_media::worker::scrape_job::SCRAPE_QUEUE;
 use crate::moments::MIGRATION_QUEUE;
 use crate::player;
 use crate::redis::{connect as valkey_connect, ValkyQueue};
+use crate::telegram;
 
 /// Health check endpoint
 #[utoipa::path(
@@ -163,7 +164,8 @@ async fn build_router(db: Database) -> Router {
             "/r",
             referral::redirect_route::router()
                 .with_state(referral::redirect_route::RedirectAppState { click_analytics }),
-        );
+        )
+        .nest("/telegram", telegram::routes());
 
     if CONFIG.app.admin_routes_enabled() {
         tracing::warn!(

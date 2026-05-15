@@ -344,6 +344,7 @@ impl Modify for SecurityAddon {
             crate::moments::social_media::model::post_model::ValidationStatus,
             crate::player::dto::GameScoreEntry,
             crate::player::dto::LoginRequest,
+            crate::player::dto::PrivyLoginRequest,
             crate::player::dto::LoginResponse,
             crate::player::dto::PlayerInfo,
             crate::player::dto::PlayerProfile,

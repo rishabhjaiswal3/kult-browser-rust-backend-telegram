@@ -9,6 +9,7 @@ pub mod do_config;
 pub mod log_config;
 pub mod onchain_config;
 pub mod scrape_config;
+pub mod telegram_config;
 pub mod valkey_config;
 pub mod zg_config;
 
@@ -22,6 +23,7 @@ pub use do_config::DoConfig;
 pub use log_config::LogConfig;
 pub use onchain_config::OnchainConfig;
 pub use scrape_config::ScrapeConfig;
+pub use telegram_config::TelegramConfig;
 pub use valkey_config::ValkeyConfig;
 pub use zg_config::ZgConfig;
 
@@ -36,6 +38,7 @@ pub struct Config {
     pub log: LogConfig,
     pub onchain: OnchainConfig,
     pub scrape: ScrapeConfig,
+    pub telegram: TelegramConfig,
     pub valkey: ValkeyConfig,
     pub zg: ZgConfig,
 }
@@ -53,6 +56,7 @@ impl Config {
             log: LogConfig::from_env(),
             onchain: OnchainConfig::from_env(),
             scrape: ScrapeConfig::from_env(),
+            telegram: TelegramConfig::from_env(),
             valkey: ValkeyConfig::from_env(),
             zg: ZgConfig::from_env(),
         }

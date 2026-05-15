@@ -16,6 +16,12 @@ pub struct AuthConfig {
     pub siwe_uri: String,
     /// EVM chain ID for SIWE (default: 1 = Ethereum mainnet)
     pub siwe_chain_id: u64,
+    /// Privy app ID used as JWT audience for identity-token based login.
+    pub privy_app_id: Option<String>,
+    /// Privy identity token verification key in JWK JSON format.
+    pub privy_verification_key_jwk: Option<String>,
+    /// Privy identity token verification key in PEM format.
+    pub privy_verification_key_pem: Option<String>,
 }
 
 impl AuthConfig {
@@ -27,14 +33,20 @@ impl AuthConfig {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(7),
-            siwe_domain: env::var("SIWE_DOMAIN")
-                .unwrap_or_else(|_| "app.kultgames.io".to_string()),
+            siwe_domain: env::var("SIWE_DOMAIN").unwrap_or_else(|_| "app.kultgames.io".to_string()),
             siwe_uri: env::var("SIWE_URI")
                 .unwrap_or_else(|_| "https://app.kultgames.io".to_string()),
             siwe_chain_id: env::var("SIWE_CHAIN_ID")
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(1),
+            privy_app_id: optional_env("PRIVY_APP_ID"),
+            privy_verification_key_jwk: optional_env("PRIVY_VERIFICATION_KEY_JWK"),
+            privy_verification_key_pem: optional_env("PRIVY_VERIFICATION_KEY_PEM"),
         }
     }
+}
+
+fn optional_env(key: &str) -> Option<String> {
+    env::var(key).ok().filter(|value| !value.trim().is_empty())
 }

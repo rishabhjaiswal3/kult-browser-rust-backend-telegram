@@ -17,6 +17,7 @@ pub mod player;
 pub mod redis;
 pub mod referral;
 pub mod server;
+pub mod telegram;
 pub mod upload;
 
 // Re-export at crate root
