@@ -206,7 +206,7 @@ async fn build_router(db: Database) -> Router {
         .merge(
             SwaggerUi::new("/docs")
                 .url("/openapi.json", crate::openapi::ApiDoc::openapi())
-                .config(SwaggerConfig::new(["openapi.json"])),
+                .config(SwaggerConfig::new(["/openapi.json"])),
         )
         .fallback(fallback)
         .layer(governor_layer)

@@ -19,6 +19,11 @@ pub struct GameListItemDto {
     pub slogan: Option<Localized<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rating: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<Object>)]
+    pub metadata: Option<serde_json::Value>,
 }
 
 /// DTO for single game detail view (includes url and more fields)
@@ -36,6 +41,11 @@ pub struct GameDetailDto {
     pub about: Option<Localized<String>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rating: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub play_count: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(value_type = Option<Object>)]
+    pub metadata: Option<serde_json::Value>,
 }
 
 /// Paginated response for all games list
