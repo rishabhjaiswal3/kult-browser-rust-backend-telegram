@@ -32,4 +32,12 @@ endpoints.md
 #ai related
 .claudecode
 .claude
-CLAUDE.md
+# AI and update scripts
+test_mongo.js
+update_guess_the_ai.py
+update_highway_hustle.py
+update_robo_wars.py
+update_warzone_warriors.py
+update_zero_dash.py
+update_zero_g_pool.py
+insert_vector_facts.py
