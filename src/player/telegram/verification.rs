@@ -38,10 +38,10 @@ pub fn verify_telegram_init_data(init_data: &str, bot_token: &str) -> Result<Tel
         .collect::<Vec<_>>()
         .join("\n");
 
-    // Step 1: secret key = HMAC-SHA256("WebAppData", key=bot_token)
-    let mut mac = HmacSha256::new_from_slice(bot_token.as_bytes())
+    // Step 1: secret key = HMAC-SHA256(bot_token, key="WebAppData")
+    let mut mac = HmacSha256::new_from_slice(b"WebAppData")
         .map_err(|e| format!("HMAC init error: {}", e))?;
-    mac.update(b"WebAppData");
+    mac.update(bot_token.as_bytes());
     let secret = mac.finalize().into_bytes();
 
     // Step 2: expected hash = HMAC-SHA256(data_check_string, key=secret)
