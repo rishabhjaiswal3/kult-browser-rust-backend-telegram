@@ -13,7 +13,7 @@ struct PrivyIdentityClaims {
     sub: String,
     iss: String,
     aud: String,
-    linked_accounts: Option<String>,
+    linked_accounts: Option<Value>,
     #[allow(dead_code)]
     exp: usize,
     #[allow(dead_code)]
@@ -26,11 +26,14 @@ pub fn verify_privy_ton_wallet(identity_token: &str, wallet_address: &str) -> Re
         return Err("Privy identity token has an invalid issuer".to_string());
     }
 
-    let linked_accounts_raw = claims
+    let linked_accounts = claims
         .linked_accounts
         .ok_or_else(|| "Privy identity token is missing linked_accounts".to_string())?;
-    let linked_accounts: Value = serde_json::from_str(&linked_accounts_raw)
-        .map_err(|e| format!("Invalid linked_accounts claim: {}", e))?;
+    let linked_accounts = match linked_accounts {
+        Value::String(raw) => serde_json::from_str(&raw)
+            .map_err(|e| format!("Invalid linked_accounts claim: {}", e))?,
+        value => value,
+    };
     let accounts = linked_accounts
         .as_array()
         .ok_or_else(|| "Privy linked_accounts claim is not an array".to_string())?;
