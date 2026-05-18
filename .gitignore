@@ -19,7 +19,6 @@
 implementation_plan_discord_tele.md
 IMPLEMENTATION_PLAN.md
 KULT_Browser_Dev_Spec_v4.docx.pdf
-endpoints.md
 
 /data
 /scripts
@@ -32,12 +31,4 @@ endpoints.md
 #ai related
 .claudecode
 .claude
-# AI and update scripts
-test_mongo.js
-update_guess_the_ai.py
-update_highway_hustle.py
-update_robo_wars.py
-update_warzone_warriors.py
-update_zero_dash.py
-update_zero_g_pool.py
-insert_vector_facts.py
+CLAUDE.md

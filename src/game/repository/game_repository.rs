@@ -13,21 +13,13 @@ use crate::GameModel;
 #[derive(Clone)]
 pub struct GameModelRepository {
     collection: Collection<GameModel>,
-    db: Database,
 }
 
 impl GameModelRepository {
     pub fn new(db: &Database) -> Self {
         Self {
             collection: db.collection::<GameModel>(&CONFIG.db.games_collection),
-            db: db.clone(),
         }
-    }
-
-    pub async fn get_play_count(&self, db_name: &str, collection_name: &str) -> Result<u64, mongodb::error::Error> {
-        let target_db = self.db.client().database(db_name);
-        let coll = target_db.collection::<Document>(collection_name);
-        coll.estimated_document_count().await
     }
 
     // Find a GameModel by its unique slug

@@ -61,7 +61,27 @@ impl TelegramBotService {
             payload["secret_token"] = json!(secret);
         }
 
-        self.call_telegram("setWebhook", payload).await
+        let webhook = self.call_telegram("setWebhook", payload).await?;
+        let menu_button = self.set_menu_button().await?;
+
+        Ok(json!({
+            "webhook": webhook,
+            "menuButton": menu_button
+        }))
+    }
+
+    pub async fn set_menu_button(&self) -> Result<Value, AppError> {
+        let payload = json!({
+            "menu_button": {
+                "type": "web_app",
+                "text": "Open Kult Games",
+                "web_app": {
+                    "url": CONFIG.telegram.mini_app_url
+                }
+            }
+        });
+
+        self.call_telegram("setChatMenuButton", payload).await
     }
 
     pub async fn delete_webhook(&self) -> Result<Value, AppError> {

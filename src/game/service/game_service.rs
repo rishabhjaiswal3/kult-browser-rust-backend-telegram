@@ -44,27 +44,7 @@ impl GameService {
             "Games query completed"
         );
 
-        let mut game_dtos: Vec<GameListItemDto> = Vec::new();
-        for game in games {
-            let mut dto = Self::to_list_item(game);
-            
-            let coll_info = match dto.identification.as_str() {
-                "guesstheai" => Some(("guesstheai", "guesstheai_users")),
-                "highwayhustle" => Some(("highwayhustle", "highwayhustleplayers")),
-                "robowars" => Some(("RoboWar", "RoboWar")),
-                "warzonewarriors" | "warzone" => Some(("new-warzone", "warzoneplayerprofiles")),
-                "zerodash" => Some(("zerodash", "players")),
-                "zerogpool" => Some(("zerogpool", "userdatas")),
-                _ => None,
-            };
-            
-            if let Some((db_n, coll_n)) = coll_info {
-                if let Ok(count) = self.repo.get_play_count(db_n, coll_n).await {
-                    dto.play_count = Some(count);
-                }
-            }
-            game_dtos.push(dto);
-        }
+        let game_dtos: Vec<GameListItemDto> = games.into_iter().map(Self::to_list_item).collect();
 
         let total_pages = if total_count == 0 {
             0
@@ -102,26 +82,8 @@ impl GameService {
             })?;
 
         tracing::debug!(identification = %identification, "Game found");
-        let mut dto = Self::to_detail(game);
-        
-        let coll_info = match dto.identification.as_str() {
-            "guesstheai" => Some(("guesstheai", "guesstheai_users")),
-            "highwayhustle" => Some(("highwayhustle", "highwayhustleplayers")),
-            "robowars" => Some(("RoboWar", "RoboWar")),
-            "warzonewarriors" | "warzone" => Some(("new-warzone", "warzoneplayerprofiles")),
-            "zerodash" => Some(("zerodash", "players")),
-            "zerogpool" => Some(("zerogpool", "userdatas")),
-            _ => None,
-        };
-        
-        if let Some((db_n, coll_n)) = coll_info {
-            if let Ok(count) = self.repo.get_play_count(db_n, coll_n).await {
-                dto.play_count = Some(count);
-            }
-        }
-        
         Ok(GameDetailResponse {
-            game: dto,
+            game: Self::to_detail(game),
         })
     }
 
@@ -145,10 +107,8 @@ impl GameService {
             category: game.category,
             slogan: game.slogan,
             rating: game.rating,
-            play_count: None,
             thumbnail: game.images.hero,
             is_downloadable: game.is_downloadable,
-            metadata: game.metadata,
         }
     }
 
@@ -160,10 +120,8 @@ impl GameService {
             category: game.category,
             about: normalize_about(game.about),
             rating: game.rating,
-            play_count: None,
             thumbnail: game.images.hero,
             is_downloadable: game.is_downloadable,
-            metadata: game.metadata,
         }
     }
 }

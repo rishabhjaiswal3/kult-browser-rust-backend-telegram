@@ -1,6 +1,6 @@
 use std::env;
 
-const DEFAULT_TELEGRAM_MINI_APP_URL: &str = "https://kult-browser-rust-l2lwg.ondigitalocean.app/";
+const DEFAULT_TELEGRAM_MINI_APP_URL: &str = "https://kult-telegram-mrvv3.ondigitalocean.app/";
 const DEFAULT_TELEGRAM_WEBHOOK_URL: &str =
     "https://kult-browser-rust-l2lwg.ondigitalocean.app/api/telegram/webhook";
 
