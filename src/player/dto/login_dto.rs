@@ -53,6 +53,17 @@ pub struct PrivyLoginRequest {
     pub referral_code: Option<String>,
 }
 
+/// Payload for logging in from a Telegram Mini App via raw initData.
+#[derive(Debug, serde::Deserialize, ToSchema)]
+pub struct TelegramMiniAppLoginRequest {
+    /// The raw `initData` string from `window.Telegram.WebApp.initData`.
+    #[serde(rename = "initData")]
+    pub init_data: String,
+
+    /// Optional display name override (falls back to Telegram first/last name).
+    pub name: Option<String>,
+}
+
 /// GET /api/player/nonce - Response body
 #[derive(Debug, Serialize, ToSchema)]
 pub struct NonceResponse {

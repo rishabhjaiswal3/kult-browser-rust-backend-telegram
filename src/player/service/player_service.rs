@@ -4,9 +4,11 @@ use crate::leaderboard::service::GameLeaderboardService;
 use crate::middleware::AuthService;
 use crate::player::dto::{
     GameScoreEntry, LoginRequest, LoginResponse, NonceResponse, PlayerInfo, PlayerProfile,
-    PlayerProfileResponse, PrivyLoginRequest, UpdateNameRequest, UpdateNameResponse,
+    PlayerProfileResponse, PrivyLoginRequest, TelegramMiniAppLoginRequest, UpdateNameRequest,
+    UpdateNameResponse,
 };
 use crate::player::privy::verify_privy_ton_wallet;
+use crate::player::telegram::verify_telegram_init_data;
 use crate::player::repository::PlayerRepository;
 use crate::player::siwe::{extract_nonce, verify_wallet_signature, NonceRepository};
 use mongodb::bson::Document;
@@ -255,6 +257,81 @@ impl PlayerService {
 
         let token = AuthService::sign_token(&player).map_err(|e| {
             tracing::error!(error = %e, "Failed to sign JWT token");
+            AppError::Internal(e)
+        })?;
+
+        Ok(LoginResponse {
+            token,
+            player: PlayerInfo {
+                id: player.id.map(|oid| oid.to_hex()).unwrap_or_default(),
+                wallet_address: player.wallet_address,
+                name: player.name,
+            },
+        })
+    }
+
+    /// Handle player login from a Telegram Mini App using raw `initData`.
+    ///
+    /// Verifies the HMAC-SHA256 signature against `TELEGRAM_BOT_TOKEN`,
+    /// then finds or creates a player keyed by `tg:{telegram_user_id}`.
+    pub async fn telegram_miniapp_login(
+        &self,
+        request: TelegramMiniAppLoginRequest,
+        ip_address: &str,
+    ) -> Result<LoginResponse, AppError> {
+        let bot_token = crate::config::CONFIG
+            .telegram
+            .bot_token
+            .as_deref()
+            .ok_or_else(|| {
+                AppError::Internal("TELEGRAM_BOT_TOKEN is not configured on the server".to_string())
+            })?;
+
+        let tg_user = verify_telegram_init_data(&request.init_data, bot_token).map_err(|reason| {
+            tracing::warn!(reason = %reason, "Telegram Mini App initData verification failed");
+            AppError::Unauthorized(reason)
+        })?;
+
+        let wallet = format!("tg:{}", tg_user.id);
+        tracing::info!(wallet = %wallet, telegram_id = tg_user.id, "Telegram Mini App login");
+
+        let display_name = request.name.unwrap_or_else(|| {
+            tg_user.username.clone().unwrap_or_else(|| {
+                let parts: Vec<&str> = [
+                    tg_user.first_name.as_deref(),
+                    tg_user.last_name.as_deref(),
+                ]
+                .iter()
+                .filter_map(|p| *p)
+                .collect();
+                if parts.is_empty() {
+                    format!("tg-player-{}", tg_user.id)
+                } else {
+                    parts.join(" ")
+                }
+            })
+        });
+
+        let (player, is_new) = self
+            .player_repo
+            .find_or_create(&wallet, &display_name, None)
+            .await
+            .map_err(|e| {
+                tracing::error!(error = %e, wallet = %wallet, "DB error during Telegram Mini App login");
+                AppError::Internal(e)
+            })?;
+
+        if is_new {
+            tracing::info!(wallet = %wallet, name = %display_name, "New Telegram Mini App player registered");
+            if let Err(e) = self.agent_repo.create_agent_for_new_user(&wallet).await {
+                tracing::error!(error = %e, wallet = %wallet, "Failed to generate AI agent for new Telegram player");
+            }
+        }
+
+        let _ = ip_address;
+
+        let token = AuthService::sign_token(&player).map_err(|e| {
+            tracing::error!(error = %e, "Failed to sign JWT for Telegram Mini App player");
             AppError::Internal(e)
         })?;
 

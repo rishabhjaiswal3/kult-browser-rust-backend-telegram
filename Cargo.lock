@@ -3281,6 +3281,7 @@ dependencies = [
  "chrono",
  "dotenvy",
  "futures",
+ "hmac",
  "jsonwebtoken",
  "mongodb",
  "nanoid",

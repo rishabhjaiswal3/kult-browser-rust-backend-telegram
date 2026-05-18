@@ -71,6 +71,7 @@ aws-sdk-s3 = "1.122.0"
 alloy = { version = "1.7.3", features = ["signers", "signer-local", "rand"] }
 rustls = { version = "0.23", features = ["ring"] }
 sha2 = "0.10.9"
+hmac = "0.12"
 tower_governor = "0.4"
 utoipa = { version = "5", features = ["axum_extras", "chrono"] }
 utoipa-swagger-ui = { version = "8", features = ["axum", "vendored"] }

@@ -9,7 +9,7 @@ use crate::leaderboard::repository::{
 };
 use crate::leaderboard::service::GameLeaderboardService;
 use crate::player::controller::{
-    get_nonce, get_profile, login, privy_login, update_name, PlayerState,
+    get_nonce, get_profile, login, privy_login, telegram_miniapp_login, update_name, PlayerState,
 };
 use crate::player::repository::PlayerRepository;
 use crate::player::service::PlayerService;
@@ -50,6 +50,7 @@ pub fn routes(
         .route("/nonce", get(get_nonce))
         .route("/login", post(login))
         .route("/privy-login", post(privy_login))
+        .route("/telegram-miniapp-login", post(telegram_miniapp_login))
         .route("/profile", get(get_profile))
         .route("/name", patch(update_name))
         .with_state(state)
