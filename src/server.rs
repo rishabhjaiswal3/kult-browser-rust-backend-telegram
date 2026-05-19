@@ -70,30 +70,33 @@ async fn build_router(db: Database) -> Router {
         Ok(valkey_client) => {
             tracing::info!("Connected to Valkey for queues");
 
-            // Queue instances — async multiplexed connections
-            let m_queue = ValkyQueue::new(valkey_client.clone(), MIGRATION_QUEUE.as_str())
-                .await
-                .expect("Failed to create migration queue connection");
-            let s_queue = ValkyQueue::new(valkey_client.clone(), SCRAPE_QUEUE.as_str())
-                .await
-                .expect("Failed to create scrape queue connection");
-            let c_queue = ValkyQueue::new(valkey_client.clone(), referral::CLICK_QUEUE.as_str())
-                .await
-                .expect("Failed to create click queue connection");
-            let v_queue = ValkyQueue::new(valkey_client.clone(), referral::VERIFY_QUEUE.as_str())
-                .await
-                .expect("Failed to create verify queue connection");
+            // Queue instances — async multiplexed connections. Log and degrade if any fail.
+            let queues: Result<(ValkyQueue, ValkyQueue, ValkyQueue, ValkyQueue), String> = async {
+                let m = ValkyQueue::new(valkey_client.clone(), MIGRATION_QUEUE.as_str()).await?;
+                let s = ValkyQueue::new(valkey_client.clone(), SCRAPE_QUEUE.as_str()).await?;
+                let c = ValkyQueue::new(valkey_client.clone(), referral::CLICK_QUEUE.as_str()).await?;
+                let v = ValkyQueue::new(valkey_client.clone(), referral::VERIFY_QUEUE.as_str()).await?;
+                Ok((m, s, c, v))
+            }
+            .await;
 
-            migration_queue = Some(m_queue);
-            scrape_queue = Some(s_queue);
-            referral_redis_client = Some(valkey_client.clone());
-            anti_fraud_service = Some(Arc::new(referral::anti_fraud::AntiFraudService::new(
-                valkey_client,
-                v_queue,
-            )));
-            click_analytics = Arc::new(referral::analytics::ClickAnalyticsService::new(Some(
-                c_queue,
-            )));
+            match queues {
+                Ok((m_queue, s_queue, c_queue, v_queue)) => {
+                    migration_queue = Some(m_queue);
+                    scrape_queue = Some(s_queue);
+                    referral_redis_client = Some(valkey_client.clone());
+                    anti_fraud_service = Some(Arc::new(referral::anti_fraud::AntiFraudService::new(
+                        valkey_client,
+                        v_queue,
+                    )));
+                    click_analytics = Arc::new(referral::analytics::ClickAnalyticsService::new(Some(
+                        c_queue,
+                    )));
+                }
+                Err(e) => {
+                    tracing::warn!(error = %e, "Valkey queue creation failed — queues disabled");
+                }
+            }
         }
         Err(e) => {
             tracing::warn!(error = %e, "Valkey not available — queues disabled");

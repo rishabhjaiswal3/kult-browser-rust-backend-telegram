@@ -119,62 +119,61 @@ async fn main() {
     match valkey_connect().await {
         Ok(valkey_client) => {
             // Migration worker
-            let migration_queue = ValkyQueue::new(valkey_client.clone(), MIGRATION_QUEUE.as_str())
-                .await
-                .expect("Failed to create migration queue connection");
-            let repo = MomentsRepository::new(&db);
-            let migration_onchain_service = if kult_browser_backend_rust::config::CONFIG
-                .onchain
-                .can_submit_transactions()
-            {
-                Some(
-                    kult_browser_backend_rust::onchain::OnchainActivityService::new(
-                        OnchainActivityRepository::new(&db),
-                    ),
-                )
-            } else {
-                None
-            };
-            let migration_da_repo = MomentDAEventRepository::new(&db);
-            let worker = MigrationWorker::new(
-                migration_queue,
-                repo,
-                migration_onchain_service,
-                shutdown_rx.clone(),
-            )
-            .with_da_events(migration_da_repo);
-
-            let handle = tokio::spawn(async move {
-                worker.run().await;
-            });
-            worker_handles.push(handle);
-            tracing::info!("Migration worker spawned as background task");
+            match ValkyQueue::new(valkey_client.clone(), MIGRATION_QUEUE.as_str()).await {
+                Ok(migration_queue) => {
+                    let repo = MomentsRepository::new(&db);
+                    let migration_onchain_service = if kult_browser_backend_rust::config::CONFIG
+                        .onchain
+                        .can_submit_transactions()
+                    {
+                        Some(
+                            kult_browser_backend_rust::onchain::OnchainActivityService::new(
+                                OnchainActivityRepository::new(&db),
+                            ),
+                        )
+                    } else {
+                        None
+                    };
+                    let migration_da_repo = MomentDAEventRepository::new(&db);
+                    let worker = MigrationWorker::new(
+                        migration_queue,
+                        repo,
+                        migration_onchain_service,
+                        shutdown_rx.clone(),
+                    )
+                    .with_da_events(migration_da_repo);
+                    let handle = tokio::spawn(async move { worker.run().await });
+                    worker_handles.push(handle);
+                    tracing::info!("Migration worker spawned as background task");
+                }
+                Err(e) => tracing::warn!(error = %e, "Migration worker not started — queue unavailable"),
+            }
 
             // Post scrape worker
-            let scrape_queue = ValkyQueue::new(valkey_client.clone(), SCRAPE_QUEUE.as_str())
-                .await
-                .expect("Failed to create scrape queue connection");
-            let post_repo = PostRepository::new(&db);
-            let scrape_worker = PostScrapeWorker::new(scrape_queue, post_repo, shutdown_rx.clone());
-            let handle = tokio::spawn(async move {
-                scrape_worker.run().await;
-            });
-            worker_handles.push(handle);
-            tracing::info!("Post scrape worker spawned as background task");
+            match ValkyQueue::new(valkey_client.clone(), SCRAPE_QUEUE.as_str()).await {
+                Ok(scrape_queue) => {
+                    let post_repo = PostRepository::new(&db);
+                    let scrape_worker = PostScrapeWorker::new(scrape_queue, post_repo, shutdown_rx.clone());
+                    let handle = tokio::spawn(async move { scrape_worker.run().await });
+                    worker_handles.push(handle);
+                    tracing::info!("Post scrape worker spawned as background task");
+                }
+                Err(e) => tracing::warn!(error = %e, "Post scrape worker not started — queue unavailable"),
+            }
 
             // Referral evaluation worker
-            let verify_queue = ValkyQueue::new(valkey_client.clone(), VERIFY_QUEUE.as_str())
-                .await
-                .expect("Failed to create verify queue connection");
-            let player_repo = Arc::new(PlayerRepository::new(&db));
-            let referral_service = Arc::new(ReferralService::new(player_repo, Some(valkey_client)));
-            let eval_worker = EvaluationWorker::new(verify_queue, referral_service, db.clone());
-            let eval_rx = shutdown_rx.clone();
-            let handle = tokio::spawn(async move {
-                eval_worker.run(eval_rx).await;
-            });
-            worker_handles.push(handle);
-            tracing::info!("Referral evaluation worker spawned as background task");
+            match ValkyQueue::new(valkey_client.clone(), VERIFY_QUEUE.as_str()).await {
+                Ok(verify_queue) => {
+                    let player_repo = Arc::new(PlayerRepository::new(&db));
+                    let referral_service = Arc::new(ReferralService::new(player_repo, Some(valkey_client)));
+                    let eval_worker = EvaluationWorker::new(verify_queue, referral_service, db.clone());
+                    let eval_rx = shutdown_rx.clone();
+                    let handle = tokio::spawn(async move { eval_worker.run(eval_rx).await });
+                    worker_handles.push(handle);
+                    tracing::info!("Referral evaluation worker spawned as background task");
+                }
+                Err(e) => tracing::warn!(error = %e, "Referral eval worker not started — queue unavailable"),
+            }
         }
         Err(e) => {
             tracing::warn!(error = %e, "Valkey not available — background workers disabled");
