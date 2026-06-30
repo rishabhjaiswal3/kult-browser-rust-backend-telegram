@@ -98,6 +98,8 @@ impl PlayerRepository {
             id: None, // MongoDB will generate
             wallet_address: wallet,
             name: name.trim().to_string(),
+            kult_points: None,
+            lifetime_kult_points: None,
             metadata,
             referral_code: None,
             created_at: Some(now),

@@ -409,10 +409,17 @@ impl PlayerService {
             })
             .collect();
 
+        let kult_points = player
+            .kult_points
+            .or(player.lifetime_kult_points)
+            .unwrap_or(0);
+
         let profile = PlayerProfile {
             wallet_address: wallet,
             username: player.name,
             rank,
+            kult_points,
+            kult_points_rank: None,
             total_score,
             level,
             total_games_played: game_scores_list.len() as u32,

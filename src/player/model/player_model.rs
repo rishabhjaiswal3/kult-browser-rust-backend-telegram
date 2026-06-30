@@ -20,6 +20,13 @@ pub struct PlayerModel {
     /// Display name (user-editable)
     pub name: String,
 
+    /// KULT Points mirrored from Creator Studio / rewards systems.
+    #[serde(rename = "kultPoints", default)]
+    pub kult_points: Option<i64>,
+
+    #[serde(rename = "lifetimeKultPoints", default)]
+    pub lifetime_kult_points: Option<i64>,
+
     /// Arbitrary metadata (e.g., avatar URL, preferences)
     /// Using Option<Document> for flexibility - can store any BSON
     #[serde(default)]

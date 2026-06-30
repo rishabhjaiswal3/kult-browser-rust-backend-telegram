@@ -23,6 +23,14 @@ pub struct PlayerProfile {
     /// Global leaderboard rank (null if unranked)
     pub rank: Option<u32>,
 
+    /// KULT Points balance from store_players.kultPoints.
+    #[serde(rename = "kultPoints")]
+    pub kult_points: i64,
+
+    /// KULT Points rank. Not computed yet.
+    #[serde(rename = "kultPointsRank", skip_serializing_if = "Option::is_none")]
+    pub kult_points_rank: Option<u32>,
+
     /// Aggregated weighted score across all games
     #[serde(rename = "totalScore")]
     pub total_score: f64,
